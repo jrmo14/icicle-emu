@@ -1,4 +1,4 @@
-use crate::{Block, Instruction, Op, Value, VarNode};
+use crate::{Block, Instruction, Op, Value, VarId, VarNode};
 use std::collections::HashMap;
 
 pub trait PcodeDisplay<T>: Sized {
@@ -184,14 +184,15 @@ impl<'a> PcodeDisplay<&'a str> for VarNode {
     }
 }
 
-impl PcodeDisplay<HashMap<VarNode, (VarNode, u16)>> for VarNode {
+impl PcodeDisplay<HashMap<VarId, (VarId, u16)>> for VarNode {
     fn fmt(
         &self,
         f: &mut std::fmt::Formatter,
-        ctx: &HashMap<VarNode, (VarNode, u16)>,
+        ctx: &HashMap<VarId, (VarId, u16)>,
     ) -> std::fmt::Result {
-        if let Some((orig, ver)) = ctx.get(self) {
-            write!(f, "{}", orig.display(ver))
+        if let Some((orig, ver)) = ctx.get(&self.id) {
+            let underlying = VarNode { id: *orig, ..*self };
+            write!(f, "{}", underlying.display(ver))
         }
         else {
             write!(f, "{}", self.display(&()))
@@ -243,11 +244,11 @@ impl PcodeDisplay<()> for UserOpId {
     }
 }
 
-impl PcodeDisplay<HashMap<VarNode, (VarNode, u16)>> for UserOpId {
+impl PcodeDisplay<HashMap<VarId, (VarId, u16)>> for UserOpId {
     fn fmt(
         &self,
         f: &mut std::fmt::Formatter,
-        _: &HashMap<VarNode, (VarNode, u16)>,
+        _: &HashMap<VarId, (VarId, u16)>,
     ) -> std::fmt::Result {
         self.fmt(f, &())
     }
@@ -265,11 +266,11 @@ impl PcodeDisplay<()> for SpaceId {
     }
 }
 
-impl PcodeDisplay<HashMap<VarNode, (VarNode, u16)>> for SpaceId {
+impl PcodeDisplay<HashMap<VarId, (VarId, u16)>> for SpaceId {
     fn fmt(
         &self,
         f: &mut std::fmt::Formatter,
-        _: &HashMap<VarNode, (VarNode, u16)>,
+        _: &HashMap<VarId, (VarId, u16)>,
     ) -> std::fmt::Result {
         self.fmt(f, &())
     }
