@@ -1,5 +1,7 @@
 use crate::{Block, Instruction, Op, Value, VarNode};
 use std::collections::HashMap;
+use crate::{Block, Instruction, Op, Value, VarId, VarNode};
+use std::collections::HashMap;
 
 pub trait PcodeDisplay<T>: Sized {
     fn fmt(&self, f: &mut std::fmt::Formatter, ctx: &T) -> std::fmt::Result;
@@ -210,6 +212,33 @@ impl PcodeDisplay<u16> for VarNode {
     }
 }
 
+impl PcodeDisplay<HashMap<VarId, (VarId, u16)>> for VarNode {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter,
+        ctx: &HashMap<VarId, (VarId, u16)>,
+    ) -> std::fmt::Result {
+        if let Some((orig, ver)) = ctx.get(&self.id) {
+            let underlying = VarNode { id: *orig, ..*self };
+            write!(f, "{}", underlying.display(ver))
+        }
+        else {
+            write!(f, "{}", self.display(&()))
+        }
+    }
+}
+
+impl PcodeDisplay<u16> for VarNode {
+    fn fmt(&self, f: &mut std::fmt::Formatter, version: &u16) -> std::fmt::Result {
+        let prefix = if self.is_temp() { "$U" } else { "$r" };
+        let id = if self.is_temp() { -self.id } else { self.id };
+        match self.offset {
+            0 => write!(f, "{prefix}{}:{}#{}", id, self.size, *version),
+            offset => write!(f, "{prefix}{}[{}]:{}#{}", id, offset, self.size, *version),
+        }
+    }
+}
+
 impl<T> PcodeDisplay<T> for Value
 where
     VarNode: PcodeDisplay<T>,
@@ -253,6 +282,16 @@ impl PcodeDisplay<HashMap<VarNode, (VarNode, u16)>> for UserOpId {
     }
 }
 
+impl PcodeDisplay<HashMap<VarId, (VarId, u16)>> for UserOpId {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter,
+        _: &HashMap<VarId, (VarId, u16)>,
+    ) -> std::fmt::Result {
+        self.fmt(f, &())
+    }
+}
+
 pub struct SpaceId(pub u16);
 
 impl PcodeDisplay<()> for SpaceId {
@@ -270,6 +309,16 @@ impl PcodeDisplay<HashMap<VarNode, (VarNode, u16)>> for SpaceId {
         &self,
         f: &mut std::fmt::Formatter,
         _: &HashMap<VarNode, (VarNode, u16)>,
+    ) -> std::fmt::Result {
+        self.fmt(f, &())
+    }
+}
+
+impl PcodeDisplay<HashMap<VarId, (VarId, u16)>> for SpaceId {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter,
+        _: &HashMap<VarId, (VarId, u16)>,
     ) -> std::fmt::Result {
         self.fmt(f, &())
     }
